@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Modal pipeline outputs (rebuildable)
+out/
+
+# Drive recordings (large, machine-local)
+recordings/
+
+# colcon build artifacts
+cart_ws/build/
+cart_ws/install/
+cart_ws/log/
+
+# rosbags
+*.bag
+*.db3
+*.mcap
+
+# OS junk
+.DS_Store
+*.swp
+*~
+
+# Editor
+.vscode/
+.idea/

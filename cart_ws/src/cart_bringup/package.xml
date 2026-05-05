@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>cart_bringup</name>
+  <version>0.1.0</version>
+  <description>Top-level launch + Nav2/EKF/cart configs.</description>
+  <maintainer email="team@stanford.edu">team</maintainer>
+  <license>MIT</license>
+
+  <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>nav2_waypoint_follower</exec_depend>
+  <exec_depend>nav2_smac_planner</exec_depend>
+  <exec_depend>nav2_regulated_pure_pursuit_controller</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+  <exec_depend>isaac_ros_visual_slam</exec_depend>
+  <exec_depend>nvblox_ros</exec_depend>
+  <exec_depend>cart_dbw</exec_depend>
+  <exec_depend>cart_sensors</exec_depend>
+  <exec_depend>cart_safety</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

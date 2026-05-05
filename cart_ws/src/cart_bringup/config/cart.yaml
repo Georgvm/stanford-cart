@@ -1,0 +1,104 @@
+# cart.yaml — single source of truth for vehicle params + DBW limits.
+# Mirrors limits.py from the cart-fsd repo. EDIT BOTH OR DRIFT.
+
+odrive_steering:
+  ros__parameters:
+    belt_ratio: 3.0                # 3 motor turns = 1 column turn
+    column_min_deg: -270.0         # soft limit (mechanical lock-to-lock guess)
+    column_max_deg: 270.0
+    trap_vel_max: 8.0              # motor turns/s
+    trap_accel_max: 15.0
+    trap_decel_max: 15.0
+    watchdog_timeout_s: 0.30
+    connect_timeout_s: 10.0
+    dry_run: false
+
+mega_pedals:
+  ros__parameters:
+    port: ""                       # autodetect by USB VID; override per-host
+    baud: 115200
+    gas_pot_max: 0.68              # mechanical max (limits.py)
+    brake_pot_max: 0.45
+    global_speed_limit: 0.45       # GLOBAL_SPEED_LIMIT
+    fsd_gas_limit: 0.25            # FSD_GAS_LIMIT — autonomy never exceeds
+    control_hz: 50.0
+    dry_run: false
+
+cmd_vel_to_dbw:
+  ros__parameters:
+    wheelbase_m: 1.65              # MEASURE on cart!
+    max_steer_column_deg: 270.0
+    max_linear_velocity: 2.0       # m/s ~ 4.5 mph for v0
+    speed_kp: 0.4
+    brake_kp: 0.6
+    min_speed_for_steering: 0.1
+    steering_smoothing: 0.3
+
+safety_gate:
+  ros__parameters:
+    hard_distance_m: 4.0
+    soft_distance_m: 9.0
+    watchdog_s: 0.5
+    max_linear_velocity: 2.0
+    max_angular_velocity: 0.6
+
+perception_estop:
+  ros__parameters:
+    yolo_model: yolov8n.pt
+    depth_model: depth-anything/Depth-Anything-V2-Small-hf
+    confidence: 0.4
+    publish_hz: 10.0
+
+# Per-camera params; instantiated 4x by sensors.launch.py.
+# Indices and flips reflect what's documented in the cart repo:
+#   /dev/video0   front_narrow  (varifocal)
+#   /dev/video6   front_wide    (fisheye, MOUNTED UPSIDE DOWN — flip vertical)
+#   /dev/video2   left
+#   /dev/video10  right
+# CHECK with `v4l2-ctl --list-devices` before depending on these.
+
+front_narrow:
+  device_index: 0
+  width: 640
+  height: 480
+  fps: 30
+  fourcc: MJPG
+  frame_id: front_narrow_optical
+  flip: none
+  publish_hz: 20.0
+
+front_wide:
+  device_index: 6
+  width: 640
+  height: 480
+  fps: 30
+  fourcc: MJPG
+  frame_id: front_wide_optical
+  flip: vertical                  # camera mount inverts vertically
+  publish_hz: 20.0
+
+left:
+  device_index: 2
+  width: 640
+  height: 480
+  fps: 30
+  fourcc: MJPG
+  frame_id: left_optical
+  flip: none
+  publish_hz: 20.0
+
+right:
+  device_index: 10
+  width: 640
+  height: 480
+  fps: 30
+  fourcc: MJPG
+  frame_id: right_optical
+  flip: none
+  publish_hz: 20.0
+
+gps_mega:
+  ros__parameters:
+    port: ""                       # autodetect; override per-host
+    baud: 115200
+    frame_id: gps
