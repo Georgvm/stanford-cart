@@ -67,12 +67,13 @@ isaac_image = (
     # Add NVIDIA's Isaac ROS apt repo + install the packages we need.
     # The dev image has VPI/nvsci/cuda-toolkit preinstalled, so the deps
     # that blocked us on the bare CUDA image should now resolve.
-    .apt_install("curl", "gnupg", "ca-certificates")
+    .apt_install("curl", "ca-certificates")
     .run_commands(
+        # Apt accepts ASCII-armored keys (.asc) directly via signed-by; skip
+        # gpg --dearmor entirely (it wants a tty in Modal's builder).
         "curl -sSL https://isaac.download.nvidia.com/isaac-ros/repos.key "
-        "  -o /tmp/isaac-ros.asc && "
-        "gpg --dearmor -o /usr/share/keyrings/nvidia-isaac-ros.gpg /tmp/isaac-ros.asc",
-        "echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/nvidia-isaac-ros.gpg] "
+        "  -o /usr/share/keyrings/nvidia-isaac-ros.asc",
+        "echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/nvidia-isaac-ros.asc] "
         "https://isaac.download.nvidia.com/isaac-ros/release-4.4 noble main' "
         "> /etc/apt/sources.list.d/isaac-ros.list",
         "apt-get update && apt-get install -y "
