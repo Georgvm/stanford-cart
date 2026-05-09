@@ -62,6 +62,9 @@ isaac_image = (
         "DEBIAN_FRONTEND": "noninteractive",
         "NVIDIA_DRIVER_CAPABILITIES": "all",
         "NVIDIA_VISIBLE_DEVICES": "all",
+        # Ubuntu 24.04 marks the system Python as externally-managed (PEP 668);
+        # in a container that's pointless. Override.
+        "PIP_BREAK_SYSTEM_PACKAGES": "1",
     })
     # Our Python runtime deps (transformers + torch + ultralytics for
     # depth_anything + perception_estop). Base image already has rclpy,
