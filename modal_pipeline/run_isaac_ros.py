@@ -62,13 +62,25 @@ isaac_image = (
         "DEBIAN_FRONTEND": "noninteractive",
         "NVIDIA_DRIVER_CAPABILITIES": "all",
         "NVIDIA_VISIBLE_DEVICES": "all",
-        # Ubuntu 24.04 marks the system Python as externally-managed (PEP 668);
-        # in a container that's pointless. Override.
         "PIP_BREAK_SYSTEM_PACKAGES": "1",
     })
-    # Our Python runtime deps (transformers + torch + ultralytics for
-    # depth_anything + perception_estop). Base image already has rclpy,
-    # cv_bridge, sensor_msgs etc.
+    # Add NVIDIA's Isaac ROS apt repo + install the packages we need.
+    # The dev image has VPI/nvsci/cuda-toolkit preinstalled, so the deps
+    # that blocked us on the bare CUDA image should now resolve.
+    .apt_install("curl", "gnupg", "ca-certificates")
+    .run_commands(
+        "curl -sSL https://isaac.download.nvidia.com/isaac-ros/repos.key "
+        "  -o /tmp/isaac-ros.asc && "
+        "gpg --dearmor -o /usr/share/keyrings/nvidia-isaac-ros.gpg /tmp/isaac-ros.asc",
+        "echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/nvidia-isaac-ros.gpg] "
+        "https://isaac.download.nvidia.com/isaac-ros/release-4.4 noble main' "
+        "> /etc/apt/sources.list.d/isaac-ros.list",
+        "apt-get update && apt-get install -y "
+        "  ros-jazzy-isaac-ros-visual-slam "
+        "  ros-jazzy-isaac-ros-image-pipeline "
+        "  ros-jazzy-isaac-ros-nvblox",
+    )
+    # Python runtime deps for our nodes.
     .pip_install(
         "transformers",
         "pillow",
