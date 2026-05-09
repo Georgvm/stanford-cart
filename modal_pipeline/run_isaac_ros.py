@@ -127,6 +127,30 @@ def run_dataset_replay(speed: float = 2.0, duration_s: int = 400) -> str:
 
     print(f"[run] dataset={dataset}  speed={speed}×  out={out_dir}")
 
+    # ---- ONE-OFF inspection of the image so we know what's in there. ----
+    # Writes to inspect.txt — pull alongside the bag to see.
+    inspect_script = (
+        "echo '=== /workspaces ==='; ls -la /workspaces/ 2>&1; "
+        "echo '=== /workspaces/isaac_ros-dev (if exists) ==='; "
+        "ls /workspaces/isaac_ros-dev/ 2>&1; "
+        "ls /workspaces/isaac_ros-dev/install/ 2>&1; "
+        "echo '=== /opt/ros/jazzy/share isaac packages ==='; "
+        "ls /opt/ros/jazzy/share/ | grep -i isaac 2>&1; "
+        "ls /opt/ros/jazzy/share/ | grep -i nvblox 2>&1; "
+        "ls /opt/ros/jazzy/share/ | grep -i nitros 2>&1; "
+        "echo '=== ros2 pkg list | grep isaac ==='; "
+        "ros2 pkg list 2>&1 | grep -iE '(isaac|nvblox|nitros)' ; "
+        "echo '=== find all visual_slam files ==='; "
+        "find / -name '*visual_slam*' 2>/dev/null | head -30; "
+        "echo '=== find all nvblox files ==='; "
+        "find / -name '*nvblox*' 2>/dev/null | head -30"
+    )
+    subprocess.run(
+        ["bash", "-c", f"{setup} && {inspect_script} > {out_dir}/inspect.txt 2>&1"],
+        check=False,
+    )
+    print(f"[run] inspection written to {out_dir}/inspect.txt")
+
     procs: list[tuple[subprocess.Popen, str]] = []
 
     def spawn(name: str, cmd: str) -> subprocess.Popen:
