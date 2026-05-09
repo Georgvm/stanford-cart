@@ -232,9 +232,67 @@ def run_dataset_replay(speed: float = 2.0, duration_s: int = 400) -> str:
     return str(out_dir)
 
 
+@app.function(
+    image=isaac_image,
+    secrets=[modal.Secret.from_name("ngc-credentials")],
+    timeout=120,
+)
+def inspect_image() -> str:
+    """Pure-Python inspection of the Isaac ROS container's package layout.
+    Returns a string we can print locally so we know what to launch."""
+    import subprocess
+    import os
+
+    out: list[str] = []
+
+    def run(label: str, cmd: str) -> None:
+        out.append(f"\n=== {label} ===")
+        try:
+            r = subprocess.run(["bash", "-c", cmd], capture_output=True,
+                               text=True, timeout=20)
+            out.append(r.stdout)
+            if r.stderr.strip():
+                out.append("STDERR: " + r.stderr)
+        except Exception as e:
+            out.append(f"ERROR: {e!r}")
+
+    setup = "source /opt/ros/jazzy/setup.bash"
+
+    run("workspaces top-level", "ls -la /workspaces/")
+    run("isaac_ros-dev contents",
+        "ls -la /workspaces/isaac_ros-dev/ 2>&1 || echo 'no isaac_ros-dev dir'")
+    run("isaac_ros-dev install (if any)",
+        "ls /workspaces/isaac_ros-dev/install/ 2>&1 || echo 'no install dir'")
+    run("isaac_ros-dev src (if any)",
+        "ls /workspaces/isaac_ros-dev/src/ 2>&1 || echo 'no src dir'")
+    run("/opt/ros/jazzy/share isaac packages",
+        "ls /opt/ros/jazzy/share/ | grep -iE '(isaac|nvblox|nitros|gxf)' || echo none")
+    run("ros2 pkg list grep isaac/nvblox",
+        f"{setup} && ros2 pkg list 2>&1 | grep -iE '(isaac|nvblox|nitros|gxf)' || echo none")
+    run("find visual_slam (limit 30)",
+        "find / -name '*visual_slam*' 2>/dev/null | grep -v /proc | head -30")
+    run("find nvblox (limit 30)",
+        "find / -name '*nvblox*' 2>/dev/null | grep -v /proc | grep -v /__modal | head -30")
+    run("env vars hinting workspace",
+        "env | grep -iE '(ROS|ISAAC|AMENT)' | sort")
+    run("rosdep cache for isaac",
+        "ls /etc/ros/rosdep/sources.list.d/ 2>&1; "
+        "find /var/lib/ros -name '*isaac*' 2>/dev/null | head -10")
+
+    return "\n".join(out)
+
+
 @app.local_entrypoint()
 def main(speed: float = 2.0, duration_s: int = 400):
     out_dir = run_dataset_replay.remote(speed=speed, duration_s=duration_s)
     print(f"\nDone. Output dir on volume: {out_dir}")
     rel = out_dir.replace("/data/", "")
     print(f"Pull with: modal volume get stanford-cart-data {rel} ./out/")
+
+
+@app.local_entrypoint()
+def inspect():
+    """modal run modal_pipeline/run_isaac_ros.py::inspect — print the
+    Isaac ROS image's package layout to stdout. Use this to figure out
+    which packages / launch files / executables actually exist."""
+    print(inspect_image.remote())
