@@ -152,6 +152,8 @@ def run_dataset_replay(speed: float = 2.0, duration_s: int = 400) -> str:
     time.sleep(8)
 
     # 3. nvblox node — depends on /front_wide/depth + image_raw.
+    # Isaac ROS 4.4 packages it under `nvblox_ros`. If executable name has
+    # changed, we'll see "package not found" in nvblox.log and pivot.
     spawn("nvblox", (
         "ros2 run nvblox_ros nvblox_node --ros-args "
         "  -p use_sim_time:=false "
@@ -163,6 +165,13 @@ def run_dataset_replay(speed: float = 2.0, duration_s: int = 400) -> str:
         "  -r color/camera_info:=/front_wide/camera_info "
         "  -r depth/image:=/front_wide/depth "
         "  -r depth/camera_info:=/front_wide/depth/camera_info"
+    ))
+
+    # First check what nvblox is actually called in this image — log it so
+    # the next iteration knows what to call.
+    spawn("inspect", (
+        "ros2 pkg list 2>&1 | grep -i nvblox && "
+        "ros2 pkg executables nvblox_ros 2>&1 | head -20"
     ))
 
     # 4. Bag record everything.
