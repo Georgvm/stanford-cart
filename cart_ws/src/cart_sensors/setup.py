@@ -18,6 +18,7 @@ setup(
             "usb_camera_node = cart_sensors.usb_camera_node:main",
             "gps_mega_node = cart_sensors.gps_mega_node:main",
             "depth_anything_node = cart_sensors.depth_anything_node:main",
+            "dataset_playback_node = cart_sensors.dataset_playback_node:main",
         ],
     },
 )

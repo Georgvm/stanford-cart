@@ -27,6 +27,20 @@ ekf_local:
     odom0_relative: true
     odom0_queue_size: 10
 
+    # ARKit pose stream — published live by the camera-grounded iPhone
+    # sensor, OR by dataset_playback_node during offline replay. Already in
+    # ROS REP-103 frame (x-fwd, y-left, z-up). Higher trust than cuVSLAM
+    # for absolute orientation since it's visual-INERTIAL fused on-device.
+    odom1: /odom/arkit
+    odom1_config: [true,  true,  false,
+                   false, false, true,
+                   true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+    odom1_differential: false
+    odom1_relative: true
+    odom1_queue_size: 50
+
     # Disabled until BerryIMU arrives. Uncomment after.
     # imu0: /imu/data
     # imu0_config: [false, false, false,
@@ -63,6 +77,17 @@ ekf_global:
                    false, false, false]
     odom1_differential: false
     odom1_relative: false
+
+    # ARKit pose — see comment in ekf_local.
+    odom2: /odom/arkit
+    odom2_config: [true,  true,  false,
+                   false, false, true,
+                   true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+    odom2_differential: false
+    odom2_relative: true
+    odom2_queue_size: 50
 
 navsat_transform:
   ros__parameters:
