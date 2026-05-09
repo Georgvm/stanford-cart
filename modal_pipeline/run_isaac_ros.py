@@ -46,72 +46,35 @@ REPO_ROOT = pathlib.Path(__file__).parent.parent
 #   5. Copy cart_ws/src into the image, colcon build our packages
 #   6. Set NVIDIA_DRIVER_CAPABILITIES=all so cuVSLAM finds CUDA runtime libs
 
+# Pre-built Isaac ROS 4.4 x86_64 base — has CUDA 13, ROS 2 Jazzy, cuVSLAM,
+# nvblox, image_pipeline, VPI, nvsci, nitros, and every other Jetson-flavored
+# dep we kept hitting. ~39 GB. Tag is content-hashed; refresh via the Isaac
+# ROS CLI (`isaac-ros` prints/pulls the current value). The amd64 sibling of
+# the arm64 image NVIDIA publishes for Jetson.
+ISAAC_ROS_IMAGE = "nvcr.io/nvidia/isaac/ros:noble-ros2_jazzy_d3e84470d576702a380478a513fb3fc6-amd64"
+
 isaac_image = (
-    # NOTE: NO add_python — using the Ubuntu/ROS-supplied python3.12 so
-    # catkin_pkg + ament tools are on the same interpreter as ros2 cli.
-    # Adding a separate Python (e.g. add_python="3.12") splits the
-    # environment and breaks colcon build of cart_bringup.
-    modal.Image.from_registry("nvidia/cuda:13.0.0-runtime-ubuntu24.04")
+    modal.Image.from_registry(
+        ISAAC_ROS_IMAGE,
+        secret=modal.Secret.from_name("ngc-credentials"),
+    )
     .env({
         "DEBIAN_FRONTEND": "noninteractive",
         "NVIDIA_DRIVER_CAPABILITIES": "all",
         "NVIDIA_VISIBLE_DEVICES": "all",
     })
-    .apt_install(
-        "software-properties-common", "curl", "gnupg", "lsb-release",
-        "ca-certificates", "build-essential", "git", "wget", "python3-pip",
-    )
-    # --- ROS 2 Jazzy --------------------------------------------------------
-    .run_commands(
-        "add-apt-repository -y universe",
-        # GPG key via HTTPS GET (no dirmngr, no keyserver protocol — Modal's
-        # builder doesn't have ~/.gnupg or dirmngr running).
-        "curl -sSL 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xC1CF6E31E6BADE8868B172B4F42ED6FBAB17C654&options=mr' "
-        "  -o /tmp/ros.key.asc && "
-        "gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg /tmp/ros.key.asc",
-        "echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] "
-        "http://packages.ros.org/ros2/ubuntu noble main' "
-        "> /etc/apt/sources.list.d/ros2.list",
-        "apt-get update && apt-get install -y "
-        "  ros-jazzy-desktop "
-        "  ros-dev-tools "
-        "  python3-colcon-common-extensions "
-        "  ros-jazzy-robot-localization "
-        "  ros-jazzy-nav2-bringup "
-        "  ros-jazzy-rosbag2-storage-mcap",
-    )
-    # --- Isaac ROS 4.4 apt repo + packages ---------------------------------
-    # Apt codename is the Ubuntu codename (`noble`), NOT the ROS distro
-    # (`jazzy`). Verified: https://isaac.download.nvidia.com/isaac-ros/release-4.4/dists/noble/InRelease
-    .run_commands(
-        "curl -sSL https://isaac.download.nvidia.com/isaac-ros/repos.key "
-        "  -o /tmp/isaac-ros.asc && "
-        "gpg --dearmor -o /usr/share/keyrings/nvidia-isaac-ros.gpg /tmp/isaac-ros.asc",
-        "echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/nvidia-isaac-ros.gpg] "
-        "https://isaac.download.nvidia.com/isaac-ros/release-4.4 noble main' "
-        "> /etc/apt/sources.list.d/isaac-ros.list",
-        "apt-get update && apt-get install -y "
-        "  ros-jazzy-isaac-ros-visual-slam "
-        "  ros-jazzy-isaac-ros-image-pipeline "
-        "  ros-jazzy-isaac-ros-nvblox "
-        "  ros-jazzy-isaac-ros-dnn-image-encoder",
-    )
-    # --- Python runtime deps for our nodes ---------------------------------
+    # Our Python runtime deps (transformers + torch + ultralytics for
+    # depth_anything + perception_estop). Base image already has rclpy,
+    # cv_bridge, sensor_msgs etc.
     .pip_install(
-        "opencv-python-headless",
-        "pynmea2",
-        "pyserial",
         "transformers",
-        "torch",
-        "torchvision",
         "pillow",
-        "pyyaml",
-        "scipy",
         "matplotlib",
-        "numpy",
         "utm",
+        "pynmea2",
     )
-    # --- Copy our workspace + build ----------------------------------------
+    # Copy our workspace + build it on top of the preinstalled Isaac ROS
+    # workspace. cart_msgs is skipped (empty stub).
     .add_local_dir(
         str(REPO_ROOT / "cart_ws" / "src"),
         "/workspaces/cart_ws/src",
@@ -135,6 +98,7 @@ isaac_image = (
     image=isaac_image,
     gpu="H100",
     volumes={"/data": volume},
+    secrets=[modal.Secret.from_name("ngc-credentials")],
     timeout=60 * 30,
 )
 def run_dataset_replay(speed: float = 2.0, duration_s: int = 400) -> str:
